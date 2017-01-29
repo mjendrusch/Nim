@@ -235,6 +235,48 @@ proc getImpl*(s: NimSym): NimNode {.magic: "GetImpl", noSideEffect.} =
   ## const.
   discard
 
+proc getTags*(s: NimNode): NimNode {. magic: "GetEffects", noSideEffect .} =
+  ## Gets inferred tags out of a proc symbol.
+  discard
+
+proc getRaises*(s: NimNode): NimNode {. magic: "GetEffects", noSideEffect .} =
+  ## Gets inferred tags out of a proc symbol.
+  discard
+
+proc getWrites*(s: NimNode): NimNode {. magic: "GetEffects", noSideEffect .} =
+  ## Gets inferred tags out of a proc symbol.
+  discard
+
+proc getEscapes*(s: NimNode): NimNode {. magic: "GetEffects", noSideEffect .} =
+  ## Gets inferred tags out of a proc symbol.
+  discard
+
+proc hasTag*(s, tag: NimNode): bool {. magic: "GetEffects", noSideEffect .} =
+  discard
+
+proc hasTag*(s: NimNode, tag: typedesc[object]): bool =
+  let
+    effects = s.getTags()
+    inst = tag.getTypeInst
+    match = if inst.typeKind == ntyTypeDesc:
+        inst[1]
+      else:
+        inst
+  hasTag(s, match)
+
+proc raises*(s, tag: NimNode): bool {. magic: "GetEffects", noSideEffect .} =
+  discard
+
+proc raises*(s: NimNode, exception: typedesc[object]): bool =
+  let
+    effects = s.raises()
+    inst = exception.getTypeInst
+    match = if inst.typeKind == ntyTypeDesc:
+        inst[1]
+      else:
+        inst
+  raises(s, match)
+
 proc error*(msg: string, n: NimNode = nil) {.magic: "NError", benign.}
   ## writes an error message at compile time
 

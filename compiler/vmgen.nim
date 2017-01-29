@@ -992,6 +992,33 @@ proc genMagic(c: PCtx; n: PNode; dest: var TDest; m: TMagic) =
   of mStaticExec: genBinaryABCD(c, n, dest, opcGorge)
   of mNLen: genUnaryABI(c, n, dest, opcLenSeq)
   of mGetImpl: genUnaryABC(c, n, dest, opcGetImpl)
+  of mGetEffects:
+    if dest < 0: dest = c.getTemp(n.typ)
+    let rc = case n[0].sym.name.s:
+      of "getRaises": 0
+      of "getTags": 1
+      of "getWrites": 2
+      of "getEscapes": 3
+      of "writtenTo": 4
+      of "escapes": 5
+      of "returnsNew": 6
+      of "hasTag": 7
+      else: # "raises"
+        8
+    let tmp = c.genx(n.sons[1])
+    case rc
+    of 0, 1, 2, 3:
+      gABC(c, n, opcGetEffects, dest, tmp, rc)
+    of 4, 5, 6:
+      gABC(c, n, opcGetEffects, dest, tmp, rc)
+    of 7:
+      let tmp1 = c.genx(n.sons[2])
+      gABC(c, n, opcGetEffects, dest, tmp, rc)
+      gABC(c, n, opcGetEffects, tmp1)
+      freeTemp(c, tmp1)
+    else:
+      gABC(c, n, opcGetEffects, dest, tmp, rc)
+    freeTemp(c, tmp)
   of mNChild: genBinaryABC(c, n, dest, opcNChild)
   of mNSetChild, mNDel:
     unused(n, dest)

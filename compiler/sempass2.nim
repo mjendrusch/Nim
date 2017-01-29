@@ -417,6 +417,60 @@ proc effectSpec(n: PNode, effectType: TSpecialWord): PNode =
         result.add(it.sons[1])
       return
 
+proc getEffect(n: PNode, effectType: TSpecialWord, idx: int): PNode =
+  let
+    s = n.sym
+    actual = s.typ.n.sons[0]
+  let real = actual.sons[idx]
+  result = newNodeI(nkBracket, n.info, real.len)
+  for i in 0 ..< real.len:
+    result.sons[i] = real[i].copyTree
+
+proc getWriteEffect(n: PNode, flag: TSymFlag): PNode =
+  let
+    s = n.sons[namePos].sym
+    params = s.typ.n
+
+  result = newNodeI(nkBracket, n.info)
+  for i in 0 ..< params.len:
+    if params[i].kind == nkSym and flag in params[i].sym.flags:
+      result.add params[i]
+
+proc getTags*(n: PNode): PNode =
+  getEffect(n, wTags, tagEffects)
+
+proc subtypeRelation(spec, real: PNode): bool
+
+proc hasTag*(n: PNode, t: PNode): bool =
+  let tags = n.getTags
+  for i in 0 ..< tags.len:
+    if tags.sons[i].subtypeRelation(t):
+      return true
+
+proc getRaises*(n: PNode): PNode =
+  getEffect(n, wTags, exceptionEffects)
+
+proc raises*(n: PNode, t: PNode): bool =
+  let tags = n.getRaises
+  for i in 0 ..< tags.len:
+    if tags.sons[i].subtypeRelation(t):
+      return true
+
+proc getWrites*(n: PNode): PNode =
+  getWriteEffect(n, sfWrittenTo)
+
+proc getEscapes*(n: PNode): PNode =
+  getWriteEffect(n, sfEscapes)
+
+proc writtenTo*(n: PNode): bool =
+  sfWrittenTo in n.sym.flags
+
+proc escapes*(n: PNode): bool =
+  sfEscapes in n.sym.flags
+
+proc returnsNew*(n: PNode): bool =
+  tfReturnsNew in n.sym.typ.flags
+
 proc documentEffect(n, x: PNode, effectType: TSpecialWord, idx: int): PNode =
   let spec = effectSpec(x, effectType)
   if isNil(spec):

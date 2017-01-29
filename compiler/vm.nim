@@ -835,6 +835,51 @@ proc rawExecute(c: PCtx, start: int, tos: PStackFrame): TFullReg =
                         else: copyTree(a.sym.ast)
       else:
         stackTrace(c, tos, pc, errFieldXNotFound, "symbol")
+    of opcGetEffects:
+      let
+        rb = instr.regB
+        rc = instr.regC
+      case rc
+      of 0, 1, 2, 3:
+        # getRaises, getTags, getWrites, getEscapes
+        ensureKind(rkNode)
+        let a = regs[rb].node
+        if a.kind == nkSym:
+          regs[ra].node = opMapEffectsToAst(a, a.info, rc)
+        else:
+          stackTrace(c, tos, pc, errFieldXNotFound, "symbol")
+      of 4, 5, 6:
+        # writtenTo, escapes, returnsNew
+        ensureKind(rkInt)
+        let a = regs[rb].node
+        if a.kind == nkSym:
+          regs[ra].intVal = opHasEffect(a, rc).int
+        else:
+          stackTrace(c, tos, pc, errFieldXNotFound, "symbol")
+      of 7:
+        # hasTag
+        ensureKind(rkInt)
+        let a = regs[rb].node
+        inc pc
+        let rd = c.code[pc].regA
+        if not regs[rd].node.typ.containsObject:
+          stackTrace(c, tos, pc, errXExpectsObjectTypes, "hasTag")
+        if a.kind == nkSym:
+          regs[ra].intVal = opHasTag(a, regs[rd].node).int
+        else:
+          stackTrace(c, tos, pc, errFieldXNotFound, "symbol")
+      else:
+        # raises
+        ensureKind(rkInt)
+        let a = regs[rb].node
+        inc pc
+        let rd = c.code[pc].regA
+        if not regs[rd].node.typ.containsObject:
+          stackTrace(c, tos, pc, errXExpectsObjectTypes, "raises")
+        if a.kind == nkSym:
+          regs[ra].intVal = opRaisesException(a, regs[rd].node).int
+        else:
+          stackTrace(c, tos, pc, errFieldXNotFound, "symbol")
     of opcEcho:
       let rb = instr.regB
       if rb == 1:

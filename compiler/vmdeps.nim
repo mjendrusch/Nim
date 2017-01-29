@@ -7,7 +7,7 @@
 #    distribution, for details about the copyright.
 #
 
-import ast, types, msgs, os, osproc, streams, options, idents, securehash
+import ast, types, msgs, os, osproc, streams, options, idents, securehash, sempass2
 
 proc readOutput(p: Process): (string, int) =
   result[0] = ""
@@ -310,3 +310,33 @@ proc opMapTypeInstToAst*(t: PType; info: TLineInfo): PNode =
 # and also tries to look like the corresponding Nim type implementation
 proc opMapTypeImplToAst*(t: PType; info: TLineInfo): PNode =
   result = mapTypeToAstX(t, info, true, true)
+
+proc opMapEffectsToAst*(n: PNode; info: TLineInfo; kind: int): PNode =
+  let
+    effects = case kind
+      of 0: getRaises(n)
+      of 1: getTags(n)
+      of 2: getWrites(n)
+      of 3: getEscapes(n)
+      else: newNode(nkNilLit)
+    length = effects.len
+  result = newNodeI(nkBracket, info, length)
+  for i in 0 ..< length:
+    result.sons[i] = effects.sons[i].copyTree
+
+proc opHasEffect*(n: PNode; kind: int): bool =
+  case kind
+  of 4:
+    writtenTo(n)
+  of 5:
+    escapes(n)
+  of 6:
+    returnsNew(n)
+  else:
+    false
+
+proc opHasTag*(n, tag: PNode): bool =
+  n.hasTag(tag)
+
+proc opRaisesException*(n, exception: PNode): bool =
+  n.raises(exception)

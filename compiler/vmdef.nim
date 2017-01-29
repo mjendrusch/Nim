@@ -103,6 +103,8 @@ type
     opcStrToIdent,
     opcIdentToStr,
     opcGetImpl,
+    opcGetEffects,  # Get raises, tags and eventually writes,
+                    # escapes and new from proc symbols.
 
     opcEcho,
     opcIndCall, # dest = call regStart, n; where regStart = fn, arg1, ...
